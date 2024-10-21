@@ -1,52 +1,47 @@
 services:
   searxng:
-    image: docker.io/searxng/searxng:latest
+    image: searxng/searxng
+    container_name: SearXNG
+    mem_limit: 8g
+    cpu_shares: 2048
+    security_opt:
+      - no-new-privileges:true
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - /volume1/docker/searxng:/etc/searxng:rw 
+    restart: on-failure:5
     ports:
-      - 4000:8080
-    networks:
-      - perplexica-network
-    restart: unless-stopped
+      - 5147:8080
 
   perplexica-backend:
     build:
       context: .
       dockerfile: backend.dockerfile
     image: itzcrazykns1337/perplexica-backend:main
+    container_name: Perplexica-Backend
     environment:
-      - SEARXNG_API_URL=http://searxng:8080
+      - SEARXNG_API_URL=http://192.168.1.2:5147
     depends_on:
       - searxng
     ports:
       - 3001:3001
     volumes:
-      - backend-dbstore:/home/perplexica/data
-      - ./config.toml:/home/perplexica/config.toml
+      - /volume1/docker/perplexica/data:/home/perplexica/data
+      - /volume1/docker/perplexica/config/config.toml:/home/perplexica/config.toml
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    networks:
-      - perplexica-network
-    restart: unless-stopped
+    restart: on-failure:5
 
   perplexica-frontend:
     build:
       context: .
       dockerfile: app.dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=http://127.0.0.1:3001/api
-        - NEXT_PUBLIC_WS_URL=ws://127.0.0.1:3001
+        - NEXT_PUBLIC_API_URL=http://192.168.1.2:3001/api
+        - NEXT_PUBLIC_WS_URL=ws://192.168.1.2:3001
     image: itzcrazykns1337/perplexica-frontend:main
+    container_name: Perplexica-Frontend
     depends_on:
       - perplexica-backend
     ports:
       - 3000:3000
-    networks:
-      - perplexica-network
-    restart: unless-stopped
-
-networks:
-  perplexica-network:
-
-volumes:
-  backend-dbstore:
+    restart: on-failure:5
